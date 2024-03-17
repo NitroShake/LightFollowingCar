@@ -4,7 +4,6 @@ class PidController {
     double previousError = 0;
     double previousDerivative = 0;
     double totalError = 0;
-    double timeCounter = 0;
     double lastTime = 0;
 
   public: PID(double targetValue, double Kp, double Ki, double Kd, double offset, double lowPassFilterGain, double maxOutput, double minOutput) {
