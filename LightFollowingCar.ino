@@ -6,7 +6,7 @@ class PidController {
     double totalError = 0;
     double lastTime = 0;
 
-  public: PidController(double targetValue, double Kp, double Ki, double Kd, double offset, double lowPassFilterGain, double maxOutput, double minOutput) {
+  public: PidController(double targetValue, double Kp, double Ki, double Kd, double offset, double lowPassFilterGain, double minOutput, double maxOutput) {
     this->targetValue = targetValue;
     this->proportionalGain = Kp;
     this->integralGain = Ki;
