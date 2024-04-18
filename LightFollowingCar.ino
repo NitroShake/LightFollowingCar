@@ -61,11 +61,11 @@ class PidController {
 };
 
 PidController travelPid = PidController(
-  1,1,1,1,1,1,0,255
+  0,1,1,1,0,0.5,0,255
 );
 
 PidController turnPid = PidController(
-  1,1,1,1,1,1,0,255
+  0,1,1,1,0,0.5,0,255
 );
 
 void travel(int backward, int forward) {
