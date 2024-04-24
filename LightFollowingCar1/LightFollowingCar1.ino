@@ -54,9 +54,9 @@ class PidController {
     return offset + constrain(pid, min, max);
   }
 
-  public: void reset() {
+  //
+  public: void resetIntegral() {
     totalError = totalError * 0.9;
-    lastTime = micros();
   }
 };
 
@@ -75,45 +75,64 @@ int in3 = 10;
 int in4 = 11;
 
 void travel(int backward, int forward) {
-  int imbalance = forward - backward;
-  
+  double imbalance = forward - backward;
   double motorOutput = travelPid.calculateOutput(imbalance);
-
-  int intMotorOutput = round(motorOutput);
-
-  if (intMotorOutput > 0) {
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, LOW);
-  }
+  //if the PID is close to neutral, stop the motor and lower PID integral.
+  if (motorOutput < 15 && motorOutput > -15) {
+    stopTurn();
+    turnPid.resetIntegral();
+  } 
+  //else, update motor to accel/decelerate
   else {
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, HIGH);
-  }
+    int intMotorOutput = round(motorOutput);
 
-  Serial.println(motorOutput);
-  Serial.println(intMotorOutput);
-  //analogWrite(TRAVELSLOT, motorOutput);
+    if (intMotorOutput > 0) {
+      digitalWrite(in1, HIGH);
+      digitalWrite(in2, LOW);
+    }
+    else {
+      digitalWrite(in1, LOW);
+      digitalWrite(in2, HIGH);
+    }
+
+    Serial.println(motorOutput);
+    Serial.println(intMotorOutput);
+    //analogWrite(TRAVELSLOT, motorOutput);
+  }
 }
 
 void turn(int left, int right) {
   int imbalance = right - left;
   double motorOutput = turnPid.calculateOutput(imbalance);
-  int intMotorOutput = round(motorOutput);
-  if (intMotorOutput > 0) {
-    digitalWrite(in3, HIGH);
-    digitalWrite(in4, LOW);
+  //if the PID is close to neutral, stop the motor and lower PID integral
+  if (motorOutput < 15 && motorOutput > -15) {
+    stopTurn();
+    turnPid.resetIntegral();
   }
+  //else, update turning motor
   else {
-    digitalWrite(in3, LOW);
-    digitalWrite(in4, HIGH);
+    int intMotorOutput = round(motorOutput);
+    if (intMotorOutput > 0) {
+      digitalWrite(in3, HIGH);
+      digitalWrite(in4, LOW);
+    }
+    else {
+      digitalWrite(in3, LOW);
+      digitalWrite(in4, HIGH);
+    }
+    Serial.println(motorOutput);
+    Serial.println(intMotorOutput);
+    //analogWrite(TURNSLOT, motorOutput);
   }
-  Serial.println(motorOutput);
-  Serial.println(intMotorOutput);
-  //analogWrite(TURNSLOT, motorOutput);
+
 }
 
-void stop() {
+void stopTravel() {
   //analogWrite(TRAVELSLOT, 0); //0, or whatever neutral is
+}
+
+void stopTurn() {
+  //something something analogWrite
 }
 
 int leftPin = 4;
@@ -146,6 +165,7 @@ void loop() {
   // int value4 = analogRead(A4);
   // Serial.println("4:" + String(value4));
 
+  //read LDRs
   int left = analogRead(A0);
   int forward = analogRead(A1);
   int right = analogRead(A2);
@@ -153,24 +173,9 @@ void loop() {
 
   Serial.println(String(forward) + " " + String(left) +  " " +String(right) + " " + String(backward));
 
-  //calculate threshold (mean + num). If any lightsensor is above the threshold, run turn/travel
-  int threshold = ((forward + backward + left + right) / 4) + 20;
-
-  if (backward > threshold || forward > threshold) {
-    travel(backward, forward);
-  }
-  else {
-    stop();
-    travelPid.reset();
-  }
-
-  if (left > threshold || right > threshold) {
-    turn(left,right);
-  }
-  else {
-    stop();
-    turnPid.reset();
-  }
+  //handle accel/decel/turning
+  travel(backward, forward);
+  turn(left,right);
 
   
 
