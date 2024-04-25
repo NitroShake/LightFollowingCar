@@ -1,6 +1,6 @@
 class PidController {
   private:
-    double targetValue, proportionalGain, integralGain, derivativeGain, max, min, offset, lowPassFilterGain; //vars set by constructor
+    double targetValue, proportionalGain, integralGain, derivativeGain, max, min, offset, lowPassFilterGain, minIntegral, maxIntegral; //vars set by constructor
     double previousError = 0;
     double previousDerivative = 0;
     double totalError = 0;
@@ -15,6 +15,8 @@ class PidController {
     this->lowPassFilterGain = lowPassFilterGain;
     this->max = maxOutput;
     this->min = minOutput;
+    this->minIntegral = minIntegral;
+    this->maxIntegral = maxIntegral;
   }
 
   public: double calculateOutput(double currentInput) {
@@ -57,18 +59,21 @@ class PidController {
 };
 
 PidController turnPid = PidController(
-  0, 0.1, 0.1, 0.1, 0, 0.5, -255, 255, -80, 80
+  0, 1, 0, 0, 0, 0.5, -255, 255, -80, 80
 );
 
 PidController travelPid = PidController(
-  0, 0.1, 0.1, 0.1, 0, 0.5, -255, 255, -80, 80
+  0, 1, 0, 0, 0, 0.5, -255, 255, -80, 80
 );
 
 
-int in1 = 8;
-int in2 = 9;
-int in3 = 10;
-int in4 = 11;
+int rightMotor1 = 7;
+int rightMotor2 = 8;
+int leftMotor1 = 12;
+int leftMotor2 = 13;
+
+int pwmLeft = 9;
+int pwmRight = 10;
 
 void traverse(int backward, int forward, int left, int right) {
   double forwardImbalance = forward - backward;
@@ -77,43 +82,45 @@ void traverse(int backward, int forward, int left, int right) {
   double baseMotorSpeed = travelPid.calculateOutput(forwardImbalance);
   double motorSpeedBias = turnPid.calculateOutput(rightImbalance);
 
-  if (baseMotorSpeed > -15 && baseMotorSpeed < 15) {
+  Serial.println(String(baseMotorSpeed) + " " + String(motorSpeedBias));
+
+  if (baseMotorSpeed > -20 && baseMotorSpeed < 20) {
     baseMotorSpeed = 0;
     travelPid.lowerIntegral();
   }
-  if (motorSpeedBias > -15 && motorSpeedBias < 15) {
+  if (motorSpeedBias > -20 && motorSpeedBias < 20) {
     motorSpeedBias = 0;
     turnPid.lowerIntegral();
   }
 
-  int leftMotorSpeed = baseMotorSpeed - motorSpeedBias;
+  int leftMotorSpeed = baseMotorSpeed + motorSpeedBias;
   leftMotorSpeed = constrain(leftMotorSpeed, -255, 255);
-  int rightMotorSpeed = baseMotorSpeed + motorSpeedBias;
+  int rightMotorSpeed = baseMotorSpeed - motorSpeedBias;
   rightMotorSpeed = constrain(rightMotorSpeed, -255, 255);
 
-  if (leftMotorSpeed > 0) {
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, LOW);
+  if (rightMotorSpeed < 0) {
+    digitalWrite(rightMotor1, HIGH);
+    digitalWrite(rightMotor2, LOW);
   }
   else {
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, HIGH);
+    digitalWrite(rightMotor1, LOW);
+    digitalWrite(rightMotor2, HIGH);
   }
 
-  if (rightMotorSpeed > 0) {
-    digitalWrite(in3, HIGH);
-    digitalWrite(in4, LOW);
+  if (leftMotorSpeed < 0) {
+    digitalWrite(leftMotor1, HIGH);
+    digitalWrite(leftMotor2, LOW);
   }
   else {
-    digitalWrite(in3, LOW);
-    digitalWrite(in4, HIGH);
+    digitalWrite(leftMotor1, LOW);
+    digitalWrite(leftMotor2, HIGH);
   }
 
   leftMotorSpeed = abs(leftMotorSpeed);
   rightMotorSpeed = abs(rightMotorSpeed);
 
-  analogWrite(PWMLEFTPIN, leftMotorSpeed);
-  analogWrite(PWMRIGHTPIN, rightMotorPin);
+  analogWrite(pwmLeft, leftMotorSpeed);
+  analogWrite(pwmRight, rightMotorSpeed);
 }
 
 //TODO: you can probably get rid of this
@@ -134,11 +141,16 @@ void setup() {
 }
 
 void loop() {
+
+  //  int left = analogRead(A0);
+  //int forward = analogRead(A1);
+  //int right = analogRead(A2);
+  //int backward = analogRead(A4);
   //read LDRs
-  int left = analogRead(A0);
+  int left = analogRead(A4);
   int forward = analogRead(A1);
   int right = analogRead(A2);
-  int backward = analogRead(A4);
+  int backward = analogRead(A0);
 
   Serial.println(String(forward) + " " + String(left) +  " " +String(right) + " " + String(backward));
 
