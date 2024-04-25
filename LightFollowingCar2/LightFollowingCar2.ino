@@ -123,7 +123,7 @@ void traverse(int backward, int forward, int left, int right) {
   analogWrite(pwmRight, rightMotorSpeed);
 }
 
-//TODO: you can probably get rid of this
+//you can't get rid of this. i have no idea why
 int leftPin = 4;
 int forwardPin = 5;
 int rightPin = 3;
