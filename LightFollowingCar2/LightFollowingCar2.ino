@@ -55,7 +55,7 @@ class PidController {
   }
 
   //
-  public: void resetIntegral() {
+  public: void lowerIntegral() {
     totalError = totalError * 0.9;
   }
 };
@@ -83,11 +83,11 @@ void traverse(int backward, int forward, int left, int right) {
 
   if (baseMotorSpeed > -15 && baseMotorSpeed < 15) {
     baseMotorSpeed = 0;
-    travelPid.resetIntegral();
+    travelPid.lowerIntegral();
   }
   if (motorSpeedBias > -15 && motorSpeedBias < 15) {
     motorSpeedBias = 0;
-    turnPid.resetIntegral();
+    turnPid.lowerIntegral();
   }
 
   int leftMotorSpeed = baseMotorSpeed - motorSpeedBias;
@@ -138,19 +138,6 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  // int value = analogRead(A0);
-  // Serial.println("1:" + String(value));
-
-  // int value2 = analogRead(A1);
-  // Serial.println("2:" + String(value2));
-
-  // int value3 = analogRead(A2);
-  // Serial.println("3:" + String(value3));
-
-  // int value4 = analogRead(A4);
-  // Serial.println("4:" + String(value4));
-
   //read LDRs
   int left = analogRead(A0);
   int forward = analogRead(A1);
@@ -159,9 +146,7 @@ void loop() {
 
   Serial.println(String(forward) + " " + String(left) +  " " +String(right) + " " + String(backward));
 
-  //handle accel/decel/turning
-  travel(backward, forward);
-  turn(left,right);
+  traverse(backward, forward, left, right);
 
   delay(1000);
 }
