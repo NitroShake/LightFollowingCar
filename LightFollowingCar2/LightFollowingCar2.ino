@@ -65,7 +65,7 @@ PidController turnPid = PidController(
 );
 
 PidController travelPid = PidController(
-  0, 1, 1, 1, 0, 0.5, -255, 255
+  0, 0.1, 0.1, 0.1, 0, 0.5, -255, 255
 );
 
 
@@ -74,67 +74,53 @@ int in2 = 9;
 int in3 = 10;
 int in4 = 11;
 
-void travel(int backward, int forward) {
-  double imbalance = forward - backward;
-  double motorOutput = travelPid.calculateOutput(imbalance);
-  //if the PID is close to neutral, stop the motor and lower PID integral.
-  if (motorOutput < 15 && motorOutput > -15) {
-    stopTravel();
-    turnPid.resetIntegral();
-  } 
-  //else, update motor to accel/decelerate
-  else {
-    int intMotorOutput = round(motorOutput);
+void traverse(int backward, int forward, int left, int right) {
+  double forwardImbalance = forward - backward;
+  double rightImbalance = right - left;
 
-    if (intMotorOutput > 0) {
-      analogWrite( , intMotorOutput);
-      digitalWrite(in1, HIGH);
-      digitalWrite(in2, LOW);
-    }
-    else {
-      digitalWrite(in1, LOW);
-      digitalWrite(in2, HIGH);
-    }
+  double baseMotorSpeed = travelPid.calculateOutput(forwardImbalance);
+  double motorSpeedBias = turnPid.calculateOutput(rightImbalance);
 
-    Serial.println(motorOutput);
-    Serial.println(intMotorOutput);
-    //analogWrite(TRAVELSLOT, motorOutput);
+  if (baseMotorSpeed > -15 && baseMotorSpeed < 15) {
+    baseMotorSpeed = 0;
+    travelPid.resetIntegral();
   }
-}
-
-void turn(int left, int right) {
-  int imbalance = right - left;
-  double motorOutput = turnPid.calculateOutput(imbalance);
-  //if the PID is close to neutral, stop the motor and lower PID integral
-  if (motorOutput < 15 && motorOutput > -15) {
-    stopTurn();
+  if (motorSpeedBias > -15 && motorSpeedBias < 15) {
+    motorSpeedBias = 0;
     turnPid.resetIntegral();
   }
-  //else, update turning motor
-  else {
-    int intMotorOutput = round(motorOutput);
-    if (intMotorOutput > 0) {
-      digitalWrite(in3, HIGH);
-      digitalWrite(in4, LOW);
-    }
-    else {
-      digitalWrite(in3, LOW);
-      digitalWrite(in4, HIGH);
-    }
-    Serial.println(motorOutput);
-    Serial.println(intMotorOutput);
-    //analogWrite(TURNSLOT, motorOutput);
+
+  int leftMotorSpeed = baseMotorSpeed - motorSpeedBias;
+  leftMotorSpeed = constrain(leftMotorSpeed, -255, 255);
+  int rightMotorSpeed = baseMotorSpeed + motorSpeedBias;
+  rightMotorSpeed = constrain(rightMotorSpeed, -255, 255);
+
+  if (leftMotorSpeed > 0) {
+    digitalWrite(in1, HIGH);
+    digitalWrite(in2, LOW);
   }
+  else {
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);
+  }
+
+  if (rightMotorSpeed > 0) {
+    digitalWrite(in3, HIGH);
+    digitalWrite(in4, LOW);
+  }
+  else {
+    digitalWrite(in3, LOW);
+    digitalWrite(in4, HIGH);
+  }
+
+  leftMotorSpeed = abs(leftMotorSpeed);
+  rightMotorSpeed = abs(rightMotorSpeed);
+
+  analogWrite(PWMLEFTPIN, leftMotorSpeed);
+  analogWrite(PWMRIGHTPIN, rightMotorPin);
 }
 
-void stopTravel() {
-  //analogWrite(TRAVELSLOT, 0); //0, or whatever neutral is
-}
-
-void stopTurn() {
-  //something something analogWrite
-}
-
+//TODO: you can probably get rid of this
 int leftPin = 4;
 int forwardPin = 5;
 int rightPin = 3;
@@ -176,8 +162,6 @@ void loop() {
   //handle accel/decel/turning
   travel(backward, forward);
   turn(left,right);
-
-  
 
   delay(1000);
 }
