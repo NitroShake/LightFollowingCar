@@ -6,7 +6,7 @@ class PidController {
     double totalError = 0;
     double lastTime = 0;
 
-  public: PidController(double targetValue, double Kp, double Ki, double Kd, double offset, double lowPassFilterGain, double minOutput, double maxOutput) {
+  public: PidController(double targetValue, double Kp, double Ki, double Kd, double offset, double lowPassFilterGain, double minOutput, double maxOutput, double minIntegral, double maxIntegral) {
     this->targetValue = targetValue;
     this->proportionalGain = Kp;
     this->integralGain = Ki;
@@ -30,11 +30,7 @@ class PidController {
 
     //calculate accumulated error, clamp it, then calculate integral
     totalError += error * deltaTime;
-    //clamp values are calculated outside before constrain (documentation says don't do operations inside constrain)
-    //clamp values are arbitrary btw, feel free to change maybe if doesn't work well
-    double minClamp = (min / integralGain) / 1.3;
-    double maxClamp = (max / integralGain) / 1.3;
-    totalError = constrain(totalError, minClamp, maxClamp);
+    totalError = constrain(totalError, minIntegral, maxIntegral);
     double integral = integralGain * totalError;
 
     //calculate derivative
@@ -61,11 +57,11 @@ class PidController {
 };
 
 PidController turnPid = PidController(
-  0, 0.1, 0.1, 0.1, 0, 0.5, -255, 255
+  0, 0.1, 0.1, 0.1, 0, 0.5, -255, 255, -80, 80
 );
 
 PidController travelPid = PidController(
-  0, 0.1, 0.1, 0.1, 0, 0.5, -255, 255
+  0, 0.1, 0.1, 0.1, 0, 0.5, -255, 255, -80, 80
 );
 
 
