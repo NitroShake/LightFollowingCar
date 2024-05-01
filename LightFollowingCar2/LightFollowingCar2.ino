@@ -1,12 +1,12 @@
 class PidController {
   private:
-    double targetValue, proportionalGain, integralGain, derivativeGain, max, min, offset, lowPassFilterGain, minIntegral, maxIntegral; //vars set by constructor
+    double targetValue, proportionalGain, integralGain, derivativeGain, max, min, offset, lowPassFilterGain, minAccumError, maxAccumError; //vars set by constructor
     double previousError = 0;
     double previousDerivative = 0;
     double totalError = 0;
     double lastTime = 0;
 
-  public: PidController(double targetValue, double Kp, double Ki, double Kd, double offset, double lowPassFilterGain, double minOutput, double maxOutput, double minIntegral, double maxIntegral) {
+  public: PidController(double targetValue, double Kp, double Ki, double Kd, double offset, double lowPassFilterGain, double minOutput, double maxOutput, double minAccumError, double maxAccumError) {
     this->targetValue = targetValue;
     this->proportionalGain = Kp;
     this->integralGain = Ki;
@@ -15,8 +15,8 @@ class PidController {
     this->lowPassFilterGain = lowPassFilterGain;
     this->max = maxOutput;
     this->min = minOutput;
-    this->minIntegral = minIntegral;
-    this->maxIntegral = maxIntegral;
+    this->minAccumError = minAccumError;
+    this->maxAccumError = maxAccumError;
   }
 
   public: double calculateOutput(double currentInput) {
@@ -32,7 +32,7 @@ class PidController {
 
     //calculate accumulated error, clamp it, then calculate integral
     totalError += error * deltaTime;
-    totalError = constrain(totalError, minIntegral, maxIntegral);
+    totalError = constrain(totalError, minAccumError, maxAccumError);
     double integral = integralGain * totalError;
 
     //calculate derivative
@@ -106,7 +106,7 @@ void traverse(int backward, int forward, int left, int right) {
     digitalWrite(rightMotor1, LOW);
     digitalWrite(rightMotor2, HIGH);
   }
-
+  
   if (leftMotorSpeed < 0) {
     digitalWrite(leftMotor1, HIGH);
     digitalWrite(leftMotor2, LOW);
@@ -142,7 +142,7 @@ void setup() {
 
 void loop() {
 
-  //  int left = analogRead(A0);
+  //int left = analogRead(A0);
   //int forward = analogRead(A1);
   //int right = analogRead(A2);
   //int backward = analogRead(A4);
