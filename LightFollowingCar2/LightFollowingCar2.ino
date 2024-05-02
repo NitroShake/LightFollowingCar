@@ -6,7 +6,7 @@ class PidController {
     double totalError = 0;
     double lastTime = 0;
 
-  public: PidController(double targetValue, double Kp, double Ki, double Kd, double offset, double lowPassFilterGain, double minOutput, double maxOutput, double minAccumError, double maxAccumError) {
+  public: PidController(double targetValue, double Kp, double Ki, double Kd, double offset, double lowPassFilterGain, double minOutput, double maxOutput, double minTotalError, double maxTotalError) {
     this->targetValue = targetValue;
     this->proportionalGain = Kp;
     this->integralGain = Ki;
@@ -15,8 +15,8 @@ class PidController {
     this->lowPassFilterGain = lowPassFilterGain;
     this->max = maxOutput;
     this->min = minOutput;
-    this->minAccumError = minAccumError;
-    this->maxAccumError = maxAccumError;
+    this->minAccumError = minTotalError;
+    this->maxAccumError = maxTotalError;
   }
 
   public: double calculateOutput(double currentInput) {
@@ -30,7 +30,7 @@ class PidController {
     double error = currentInput - targetValue;
     double proportional = proportionalGain * error;
 
-    //calculate accumulated error, clamp it, then calculate integral
+    //calculate accumulated error, clamp it, then calculate integral. todo: clamp may be unneccesary??
     totalError += error * deltaTime;
     totalError = constrain(totalError, minAccumError, maxAccumError);
     double integral = integralGain * totalError;
@@ -52,18 +52,17 @@ class PidController {
     return offset + constrain(pid, min, max);
   }
 
-  //
-  public: void lowerIntegral() {
-    totalError = totalError * 0.9;
+  public: void multiplyTotalError(double multi) {
+    totalError = totalError * multi;
   }
 };
 
 PidController turnPid = PidController(
-  0, 1, 0, 0, 0, 0.5, -255, 255, -80, 80
+  0, 1, 0, 0, 0, 0.5, -255, 255, -10000, 10000
 );
 
 PidController travelPid = PidController(
-  0, 1, 0, 0, 0, 0.5, -255, 255, -80, 80
+  0, 1, 0, 0, 0, 0.5, -255, 255, -10000, 10000
 );
 
 
@@ -84,14 +83,24 @@ void traverse(int backward, int forward, int left, int right) {
 
   Serial.println(String(baseMotorSpeed) + " " + String(motorSpeedBias));
 
-  if (baseMotorSpeed > -20 && baseMotorSpeed < 20) {
+  if (baseMotorSpeed > -100 && baseMotorSpeed < 100) {
     baseMotorSpeed = 0;
-    travelPid.lowerIntegral();
+    travelPid.multiplyTotalError(0.9);
   }
-  if (motorSpeedBias > -20 && motorSpeedBias < 20) {
+  else {
+    travelPid.multiplyTotalError(0.95);
+  }
+
+
+  if (motorSpeedBias > -40 && motorSpeedBias < 40) {
     motorSpeedBias = 0;
-    turnPid.lowerIntegral();
+    turnPid.multiplyTotalError(0.9);
   }
+  else {
+    travelPid.multiplyTotalError(0.95);
+  }
+
+  //Serial.println(String(baseMotorSpeed) + " " + String(motorSpeedBias));
 
   int leftMotorSpeed = baseMotorSpeed + motorSpeedBias;
   leftMotorSpeed = constrain(leftMotorSpeed, -255, 255);
@@ -100,6 +109,10 @@ void traverse(int backward, int forward, int left, int right) {
 
   if (rightMotorSpeed < 0) {
     digitalWrite(rightMotor1, HIGH);
+    digitalWrite(rightMotor2, LOW);
+  }
+  else if (rightMotorSpeed == 0) {
+    digitalWrite(rightMotor1, LOW);
     digitalWrite(rightMotor2, LOW);
   }
   else {
@@ -111,6 +124,10 @@ void traverse(int backward, int forward, int left, int right) {
     digitalWrite(leftMotor1, HIGH);
     digitalWrite(leftMotor2, LOW);
   }
+  else if (leftMotorSpeed == 0) {
+    digitalWrite(leftMotor1, LOW);
+    digitalWrite(leftMotor2, LOW);
+  }
   else {
     digitalWrite(leftMotor1, LOW);
     digitalWrite(leftMotor2, HIGH);
@@ -119,8 +136,10 @@ void traverse(int backward, int forward, int left, int right) {
   leftMotorSpeed = abs(leftMotorSpeed);
   rightMotorSpeed = abs(rightMotorSpeed);
 
-  analogWrite(pwmLeft, leftMotorSpeed);
-  analogWrite(pwmRight, rightMotorSpeed);
+  double speedMulti = 1;
+
+  analogWrite(pwmLeft, leftMotorSpeed * speedMulti);
+  analogWrite(pwmRight, rightMotorSpeed * speedMulti);
 }
 
 //you can't get rid of this. i have no idea why
@@ -152,10 +171,10 @@ void loop() {
   int right = analogRead(A2);
   int backward = analogRead(A0);
 
-  Serial.println(String(forward) + " " + String(left) +  " " +String(right) + " " + String(backward));
+  //Serial.println(String(forward) + " " + String(backward) +  " " +String(right) + " " + String(left));
 
   traverse(backward, forward, left, right);
 
-  delay(1000);
+  delay(100);
 }
 
